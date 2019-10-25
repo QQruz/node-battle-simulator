@@ -42,17 +42,17 @@ module.exports = class Army extends EventEmitter {
     this.units = Math.round(this.units - damage);
 
     if (this.units <= 0) {
-      this.emit('defeated', this);
+      this.emit('defeated');
     }
   }
 
   reload(time = null) {
-    this.emit('reloading', this);
+    this.emit('reloading');
 
     const reloadTime = time || this.units * 10; // 0.01 second per unit
 
     setTimeout(() => {
-      this.emit('reloaded', this);
+      this.emit('reloaded');
     }, reloadTime);
   }
 
