@@ -35,6 +35,8 @@ module.exports = class Battle {
 	}
 
 	start() {
+		if (this.armies.length < 10) throw new Error('Battle needs atleast 10 armies to start');
+
 		this.setStatus('inProgress');
 
 		// setup listeners first
@@ -201,5 +203,21 @@ module.exports = class Battle {
 				this.attack(army);
 			}
 		});
+	}
+
+	reset() {
+		this.armies.forEach((army) => {
+			army.removeAllListeners();
+		});
+
+		this.armies = [];
+
+		this.log.get().actions = [];
+
+		this.log.get().armies.forEach((army) => {
+			this.armies.push(new Army(army.name, army.units, army.strategy));
+		});
+
+		this.start();
 	}
 };
