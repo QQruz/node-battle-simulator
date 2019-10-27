@@ -64,7 +64,7 @@ module.exports = class Logger {
   }
 
   getId() {
-    return this.log._id
+    return this.log._id.toString();
   }
 
   async save() {
@@ -72,11 +72,13 @@ module.exports = class Logger {
   }
   
   static async load(id) {
+    if (!ObjectID.isValid(id)) return null;
+    
     const logger = new Logger();
 
     const log = await logger.db.findOne({ _id: ObjectID(id) });
 
-    if (!log) throw new Error('Log not found');
+    if (!log) return null;
 
     logger.log = log;
 
