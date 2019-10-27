@@ -1,90 +1,203 @@
+const Logger = require('./logger');
+const Army = require('./army');
+
 module.exports = class Battle {
-  constructor() {
-    this.armies = [];
-  }
+	constructor() {
+		this.armies = [];
 
-  addArmy(army) {
-    this.uniqueName(army);
+		this.log = new Logger();
 
-    this.armies.push(army);
-  }
+		this.id = this.log.getId();
 
-  // ensures that each army has unique name
-  uniqueName(army) {
-    let counter = 0;
+		this.setStatus('lobby');
+	}
 
-    const { name } = army;
+	addArmy(army) {
+		this.uniqueName(army);
 
-    while (this.armies.some((troops) => troops.name === army.name)) {
-      counter += 1;
-      army.setName(`${name}(${counter})`);
-    }
-  }
+		this.armies.push(army);
 
-  start() {
-    // setup listeners first
-    this.armies.forEach((army) => {
-      army.on('defeated', () => {
-        this.defeat(army);
-      });
+		this.log.army(army);
+	}
 
-      army.on('reloading', () => {
-        console.log(`${army.name} reloading`);
-        console.log('============');
-      });
+	// ensures that each army has unique name
+	uniqueName(army) {
+		let counter = 0;
 
-      army.on('reloaded', () => {
-        this.attack(army);
-      });
-    });
+		const { name } = army;
 
-    // add shuffle maybe?
+		while (this.armies.some((troops) => troops.name === army.name)) {
+			counter += 1;
+			army.setName(`${name}(${counter})`);
+		}
+	}
 
-    // start the attacks
-    this.armies.forEach((army) => {
-      this.attack(army);
-    });
-  }
+	start() {
+		this.setStatus('inProgress');
 
-  attack(army) {
-    const opponent = this.setTarget(army);
+		// setup listeners first
+		this.addListeners();
 
-    const damage = army.attack();
+		// add shuffle maybe?
 
-    console.log(`${army.name} (${army.units}) attacks ${opponent.name} (${opponent.units}) for ${damage} damage`);
-    console.log('============');
+		// start the attacks
+		this.armies.forEach((army) => {
+			this.attack(army);
+		});
+	}
 
-    opponent.takeDamage(damage);
+	addListeners() {
+		this.armies.forEach((army) => {
+			army.on('defeated', () => {
+				this.defeat(army);
+			});
 
-    army.reload();
-  }
+			army.on('reloading', () => {
+				this.log.reloadStart(army);
+				console.log(`${army.name} reloading`);
+				console.log('============');
+			});
 
-  setTarget(attacker) {
-    const opponents = this.armies.filter((army) => army !== attacker);
+			army.on('reloaded', () => {
+				this.log.reloadEnd(army);
+				this.attack(army);
+			});
+		});
+	}
 
-    if (attacker.strategy === 'weakest') {
-      return opponents.reduce((prev, curr) => (prev.units <= curr.units ? prev : curr));
-    }
+	attack(army) {
+		const opponent = this.setTarget(army);
 
-    if (attacker.strategy === 'strongest') {
-      return opponents.reduce((prev, curr) => (prev.units >= curr.units ? prev : curr));
-    }
+		const damage = army.attack();
 
-    return opponents[Math.floor(Math.random() * opponents.length)];
-  }
+		this.log.attack(army, opponent, damage);
 
-  defeat(army) {
-    army.removeAllListeners();
+		console.log(`${army.name} (${army.units}) attacks ${opponent.name} (${opponent.units}) for ${damage} damage`);
+		console.log('============');
 
-    this.armies = this.armies.filter((troops) => troops !== army);
+		opponent.takeDamage(damage);
 
-    this.checkForWinner();
-  }
+		army.reload();
+	}
 
-  checkForWinner() {
-    if (this.armies.length === 1) {
-      this.armies[0].removeAllListeners();
-      console.log(`${this.armies[0].name} is the winner`);
-    }
-  }
+	setTarget(attacker) {
+		const opponents = this.armies.filter((army) => army !== attacker);
+
+		if (attacker.strategy === 'weakest') {
+			return opponents.reduce((prev, curr) => (prev.units <= curr.units ? prev : curr));
+		}
+
+		if (attacker.strategy === 'strongest') {
+			return opponents.reduce((prev, curr) => (prev.units >= curr.units ? prev : curr));
+		}
+
+		return opponents[Math.floor(Math.random() * opponents.length)];
+	}
+
+	defeat(army) {
+		army.removeAllListeners();
+
+		this.armies = this.armies.filter((troops) => troops !== army);
+
+		this.checkForWinner();
+	}
+
+	checkForWinner() {
+		if (this.armies.length === 1) {
+			this.armies[0].removeAllListeners();
+
+			this.setStatus('finished');
+
+			console.log(`${this.armies[0].name} is the winner`);
+
+			this.save()
+				.then(() => {
+					console.log(`${this.id} game saved`);
+				})
+				.catch((error) => {
+					console.log(`Error saving game ${this.id}`);
+					console.log(error);
+				});
+		}
+	}
+
+	setStatus(status) {
+		this.status = status;
+
+		this.log.status(status);
+	}
+
+	async save() {
+		await this.log.save();
+	}
+
+	static async load(id, startAt = null) {
+		const log = await Logger.load(id);
+
+		return Battle.fromLog(log, startAt);
+	}
+
+	static fromLog(log, startAt = null) {
+		const battle = new Battle();
+
+		battle.log = log;
+
+		battle.parseLog(startAt);
+
+		return battle;
+	}
+
+	parseLog(startAt) {
+		this.log.get().armies.forEach((army) => {
+			this.armies.push(new Army(army.name, army.units, army.strategy));
+		});
+
+		this.addListeners();
+
+		if (startAt) {
+			this.log.rewindTo(startAt);
+		}
+
+		const lastActions = this.forwardGame();
+
+		this.resume(lastActions);
+	}
+
+	forwardGame() {
+		const lastActions = {};
+
+		this.log.get().actions.forEach((action) => {
+			lastActions[action.army.name] = action;
+
+			if (action.action === 'attack') {
+				const opponent = this.armies.find((army) => army.name === action.opponent.name);
+
+				opponent.takeDamage(action.damage);
+			}
+		});
+
+		return lastActions;
+	}
+
+	resume(lastActions) {
+		this.log.generateNewId();
+
+		this.id = this.log.getId();
+
+		this.setStatus('inProgress');
+
+		const lastLoggedTime = Object.values(lastActions).reduce((prev, curr) => (prev.time >= curr.time ? prev : curr)).time;
+
+		this.armies.forEach((army) => {
+			if (lastActions[army.name] && lastActions[army.name].action === 'attack') {
+				army.reload();
+			} else if (lastActions[army.name] && lastActions[army.name].action === 'reloadStart') {
+				const timeLeft = lastLoggedTime - lastActions[army.name].time;
+
+				army.reload(timeLeft);
+			} else {
+				this.attack(army);
+			}
+		});
+	}
 };
