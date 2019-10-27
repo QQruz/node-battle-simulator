@@ -94,4 +94,10 @@ module.exports = class Logger {
   static async listAll() {
     return await DB.get().collection('logs').find({}).project({ actions: false }).toArray();
   }
+
+  generateNewId() {
+    this.log._id = new ObjectID();
+
+    return this.log.getId();
+  }
 };
