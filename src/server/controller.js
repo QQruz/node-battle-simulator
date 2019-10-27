@@ -69,12 +69,12 @@ const resetGame = (req, res) => {
 	const game = findGameById(req);
 
 	if (!game) {
-		return res.status(404).send('Game not found')
+		return res.status(404).send('Game not found');
 	}
 
 	game.reset();
 
-	res.send({ ok: 'Game reset' });
+	return res.send({ ok: 'Game reset' });
 };
 
 module.exports = {
