@@ -165,7 +165,7 @@ module.exports = class Battle {
 		return battle;
 	}
 
-	parseLog(startAt) {
+	parseLog(startAt = null) {
 		this.log.get().armies.forEach((army) => {
 			this.armies.push(new Army(army.name, army.units, army.strategy));
 		});

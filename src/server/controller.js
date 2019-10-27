@@ -68,9 +68,13 @@ const startGame = (req, res) => {
 const resetGame = (req, res) => {
 	const game = findGameById(req);
 
+	if (!game) {
+		return res.status(404).send('Game not found')
+	}
+
 	game.reset();
 
-	res.send({ ok: 'Game reseted' });
+	res.send({ ok: 'Game reset' });
 };
 
 module.exports = {

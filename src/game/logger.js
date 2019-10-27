@@ -100,14 +100,10 @@ module.exports = class Logger {
   static async loadInProgess() {
     const logs = await DB.get().collection('logs').find({ status: 'inProgress' }).toArray();
 
-    const loggers = [];
-
-    logs.forEach(log => {
+    return logs.map(log => {
       const logger = new Logger();
       logger.log = log;
-      loggers.push(logger);
+      return logger;
     });
-
-    return loggers;
   }
 };
