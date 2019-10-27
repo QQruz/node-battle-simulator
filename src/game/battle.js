@@ -12,7 +12,9 @@ module.exports = class Battle {
 		this.setStatus('lobby');
 	}
 
-	addArmy(army) {
+	addArmy(name, units, strategy) {
+		const army = new Army(name, units, strategy);
+
 		this.uniqueName(army);
 
 		this.armies.push(army);
