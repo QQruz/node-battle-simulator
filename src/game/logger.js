@@ -94,6 +94,6 @@ module.exports = class Logger {
   }
 
   static async listAll() {
-    return await this.db.find({}).project({ actions: false }).toArray();
+    return await DB.get().collection('logs').find({}).project({ actions: false }).toArray();
   }
 };
