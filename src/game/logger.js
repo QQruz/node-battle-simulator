@@ -78,9 +78,7 @@ module.exports = class Logger {
 
     if (!log) throw new Error('Log not found');
 
-    logger.log.status = log.status;
-    logger.log.armies = log.armies;
-    logger.log.actions = log.actions;
+    logger.log = log;
 
     return logger;
   }
