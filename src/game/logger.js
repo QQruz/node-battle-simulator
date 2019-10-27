@@ -68,7 +68,7 @@ module.exports = class Logger {
   }
 
   async save() {
-		await this.db.insertOne(this.log);
+		await this.db.save(this.log);
   }
   
   static async load(id) {
@@ -97,9 +97,17 @@ module.exports = class Logger {
     return await DB.get().collection('logs').find({}).project({ actions: false }).toArray();
   }
 
-  generateNewId() {
-    this.log._id = new ObjectID();
+  static async loadInProgess() {
+    const logs = await DB.get().collection('logs').find({ status: 'inProgress' }).toArray();
 
-    return this.log.getId();
+    const loggers = [];
+
+    logs.forEach(log => {
+      const logger = new Logger();
+      logger.log = log;
+      loggers.push(logger);
+    });
+
+    return loggers;
   }
 };

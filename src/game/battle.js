@@ -1,6 +1,8 @@
 const Logger = require('./logger');
 const Army = require('./army');
 
+let registry = [];
+
 module.exports = class Battle {
 	constructor() {
 		this.armies = [];
@@ -10,6 +12,16 @@ module.exports = class Battle {
 		this.id = this.log.getId();
 
 		this.setStatus('lobby');
+
+		registry.push(this);
+	}
+
+	static getRegistry() {
+		return registry;
+	}
+
+	static count() {
+		return registry.length;
 	}
 
 	addArmy(name, units, strategy) {
@@ -114,6 +126,8 @@ module.exports = class Battle {
 
 			console.log(`${this.armies[0].name} is the winner`);
 
+			registry = registry.filter((battle) => battle !== this);
+
 			this.save()
 				.then(() => {
 					console.log(`${this.id} game saved`);
@@ -184,8 +198,6 @@ module.exports = class Battle {
 	}
 
 	resume(lastActions) {
-		this.log.generateNewId();
-
 		this.id = this.log.getId();
 
 		this.setStatus('inProgress');
@@ -219,5 +231,13 @@ module.exports = class Battle {
 		});
 
 		this.start();
+	}
+
+	static async listAll() {
+		const logs = await Logger.listAll();
+
+		const games = registry.map((game) => game.log.get());
+
+		return games.concat(logs);
 	}
 };

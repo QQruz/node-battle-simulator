@@ -1,34 +1,37 @@
-require('dotenv').config(); // TOREMOVE: after index is added
 const { MongoClient } = require('mongodb');
 
 module.exports = class DB {
-  static async connect() {
-    const options = { useUnifiedTopology: true };
+	static async connect() {
+		const options = { useUnifiedTopology: true };
 
-    let url = 'mongodb://';
+		let url = 'mongodb://';
 
-    if (process.env.DB_USER) {
-      url += `${process.env.DB_USER}:${process.env.DB_PASSWORD}@`;
-    }
+		if (process.env.DB_USER) {
+			url += `${process.env.DB_USER}:${process.env.DB_PASSWORD}@`;
+		}
 
-    url += `${process.env.DB_HOST}:${process.env.DB_PORT}`;
+		url += `${process.env.DB_HOST}:${process.env.DB_PORT}`;
 
-    const client = new MongoClient(url, options);
+		DB.client = new MongoClient(url, options);
 
-    let connection;
+		let connection;
 
-    try {
-      connection = await client.connect();
-    } catch (error) {
-      console.log(error);
-      process.exit(1);
-    }
+		try {
+			connection = await DB.client.connect();
+		} catch (error) {
+			console.log(error);
+			process.exit(1);
+		}
 
-    DB.connection = connection.db(process.env.DB_NAME);
-    console.log(`Connected to db: ${process.env.DB_NAME}`);
-  }
+		DB.connection = connection.db(process.env.DB_NAME);
+		console.log(`Connected to db: ${process.env.DB_NAME}`);
+	}
 
-  static get() {
-    return DB.connection;
-  }
+	static get() {
+		return DB.connection;
+	}
+
+	static close() {
+		DB.client.close();
+	}
 };
